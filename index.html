@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travaux Dirigés – Interaction Gestuelle</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            overflow: hidden;
+            background: #0d1117;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #fff;
+        }
+
+        /* ─────────────────────────────────────────
+           ÉCRAN DE CONNEXION
+        ───────────────────────────────────────── */
+        #loginScreen {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #0d1117 0%, #1a2332 50%, #0d1117 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9000;
+        }
+
+        .login-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 20px;
+            padding: 48px 56px;
+            width: 480px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+            backdrop-filter: blur(16px);
+        }
+
+        .login-card h1 {
+            font-size: 26px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #58a6ff, #79c0ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .login-card p.subtitle {
+            text-align: center;
+            color: rgba(255,255,255,0.45);
+            font-size: 13px;
+            margin-bottom: 36px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: rgba(255,255,255,0.55);
+            margin-bottom: 7px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .form-group input::placeholder { color: rgba(255,255,255,0.28); }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: #58a6ff;
+            background: rgba(88,166,255,0.08);
+        }
+
+        .form-group select option { background: #1a2332; color: #fff; }
+
+        .form-row { display: flex; gap: 16px; }
+        .form-row .form-group { flex: 1; }
+
+        #btnLogin {
+            width: 100%;
+            padding: 14px;
+            margin-top: 10px;
+            background: linear-gradient(90deg, #1f6feb, #388bfd);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        #btnLogin:hover { opacity: 0.9; transform: translateY(-1px); }
+        #btnLogin:active { transform: translateY(0); }
+
+        .login-error {
+            color: #f85149;
+            font-size: 13px;
+            text-align: center;
+            margin-top: 12px;
+            display: none;
+        }
+
+        /* ─────────────────────────────────────────
+           ÉCRAN PRINCIPAL
+        ───────────────────────────────────────── */
+        #appScreen { display: none; }
+
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #mainImage {
+            position: absolute;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: transform 0.15s ease;
+            transform-origin: center center;
+        }
+
+        #debugZones {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.18s ease;
+        }
+
+        #debugZones.visible {
+            opacity: 1;
+        }
+
+        .debug-zone {
+            position: absolute;
+            border: 2px dashed rgba(255, 180, 0, 0.75);
+            background: rgba(255, 180, 0, 0.08);
+            pointer-events: none;
+            border-radius: 4px;
+        }
+
+        .debug-zone-label {
+            position: absolute;
+            top: 3px;
+            left: 5px;
+            font-size: 10px;
+            color: rgba(255,180,0,0.95);
+            pointer-events: none;
+        }
+
+        /* ─────────────────────────────────────────
+           WEBCAM
+        ───────────────────────────────────────── */
+        #videoContainer {
+            position: fixed;
+            bottom: 14px;
+            right: 14px;
+            width: 260px;
+            height: 195px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            z-index: 1000;
+        }
+
+        #webcam {
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1);
+        }
+
+        #canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1);
+        }
+
+        /* ─────────────────────────────────────────
+           PANNEAU HUD
+        ───────────────────────────────────────── */
+        #hud {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            background: rgba(13,17,23,0.82);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px;
+            padding: 14px 18px;
+            font-size: 13px;
+            z-index: 1000;
+            min-width: 260px;
+            backdrop-filter: blur(8px);
+        }
+
+        #hud .hud-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #58a6ff;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 7px;
+        }
+
+        .hud-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 5px 0;
+        }
+
+        .hud-label { color: rgba(255,255,255,0.45); font-size: 12px; }
+        .hud-value { color: #fff; font-size: 12px; font-weight: 500; }
+        .hud-value.ok { color: #3fb950; }
+        .hud-value.warn { color: #d29922; }
+        .hud-value.active { color: #58a6ff; font-weight: 700; }
+
+        /* ─────────────────────────────────────────
+           BADGE SESSION (haut centre)
+        ───────────────────────────────────────── */
+        #sessionBadge {
+            position: fixed;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(13,17,23,0.82);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 50px;
+            padding: 7px 20px;
+            font-size: 13px;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+            display: flex;
+            gap: 14px;
+            align-items: center;
+        }
+
+        .badge-item { color: rgba(255,255,255,0.55); }
+        .badge-item span { color: #fff; font-weight: 600; }
+        .badge-sep { color: rgba(255,255,255,0.2); }
+
+        /* ─────────────────────────────────────────
+           POINTEUR
+        ───────────────────────────────────────── */
+        #pointer {
+            position: fixed;
+            width: 32px;
+            height: 32px;
+            border: 3px solid #00e676;
+            border-radius: 50%;
+            background: rgba(0,230,118,0.15);
+            pointer-events: none;
+            z-index: 500;
+            display: none;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 14px rgba(0,230,118,0.6);
+            transition: border-color 0.1s, background 0.1s, box-shadow 0.1s;
+        }
+
+        #pointer::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px; height: 8px;
+            background: #00e676;
+            border-radius: 50%;
+        }
+
+        #pointer.active {
+            border-color: #ff1744;
+            background: rgba(255,23,68,0.18);
+            box-shadow: 0 0 18px rgba(255,23,68,0.7);
+        }
+
+        #pointer.active::after { background: #ff1744; }
+
+        /* ─────────────────────────────────────────
+           TOAST NOTIFICATION
+        ───────────────────────────────────────── */
+        #toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(60px);
+            background: rgba(30,40,55,0.95);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 50px;
+            padding: 10px 24px;
+            font-size: 14px;
+            color: #fff;
+            z-index: 2000;
+            transition: transform 0.3s ease;
+            pointer-events: none;
+        }
+
+        #toast.show { transform: translateX(-50%) translateY(0); }
+        #toast.success { border-color: #3fb950; color: #3fb950; }
+        #toast.info { border-color: #58a6ff; color: #58a6ff; }
+
+        /* ─────────────────────────────────────────
+           LOADING
+        ───────────────────────────────────────── */
+        #loading {
+            position: fixed;
+            inset: 0;
+            background: rgba(13,17,23,0.88);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 8000;
+            gap: 16px;
+        }
+
+        .spinner {
+            width: 48px; height: 48px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: #58a6ff;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #loading p { color: rgba(255,255,255,0.55); font-size: 15px; }
+
+        /* Bouton déconnexion */
+        #btnLogout {
+            position: fixed;
+            top: 14px;
+            right: 290px;
+            background: rgba(248,81,73,0.15);
+            border: 1px solid rgba(248,81,73,0.4);
+            border-radius: 8px;
+            color: #f85149;
+            padding: 7px 14px;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 1001;
+            transition: background 0.2s;
+        }
+        #btnLogout:hover { background: rgba(248,81,73,0.28); }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     ÉCRAN DE CONNEXION
+═══════════════════════════════════════════ -->
+<div id="loginScreen">
+    <div class="login-card">
+        <h1>🖐 Gestuelle Interactive</h1>
+        <p class="subtitle">Identifiez-vous pour commencer votre séance de TD</p>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Prénom</label>
+                <input type="text" id="inputPrenom" placeholder="ex : Marie" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>Nom</label>
+                <input type="text" id="inputNom" placeholder="ex : Dupont" autocomplete="off">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Classe</label>
+            <input type="text" id="inputClasse" placeholder="ex : L3 Informatique" autocomplete="off">
+        </div>
+
+        <div class="form-group">
+            <label>Référence TD</label>
+            <select id="selectTD">
+                <option value="">-- Sélectionnez votre TD --</option>
+                <option value="TD1">TD1</option>
+                <option value="TD2">TD2</option>
+                <option value="TD3">TD3</option>
+                <option value="TD4">TD4</option>
+                <option value="TD5">TD5</option>
+                <option value="TD6">TD6</option>
+                <option value="TD7">TD7</option>
+                <option value="TD8">TD8</option>
+                <option value="TD9">TD9</option>
+                <option value="TD10">TD10</option>
+            </select>
+        </div>
+
+        <button id="btnLogin">Démarrer la session →</button>
+        <p class="login-error" id="loginError">Veuillez remplir tous les champs.</p>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     ÉCRAN PRINCIPAL
+═══════════════════════════════════════════ -->
+<div id="appScreen">
+    <div id="container">
+        <img id="mainImage" src="" alt="Image principale">
+        <div id="debugZones"></div>
+    </div>
+
+    <div id="pointer"></div>
+
+    <div id="videoContainer">
+        <video id="webcam" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <!-- Badge session -->
+    <div id="sessionBadge">
+        <span class="badge-item">👤 <span id="badgeUser">-</span></span>
+        <span class="badge-sep">|</span>
+        <span class="badge-item">🏫 <span id="badgeClasse">-</span></span>
+        <span class="badge-sep">|</span>
+        <span class="badge-item">📋 <span id="badgeTD">-</span></span>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud">
+        <div class="hud-title">🖐 Contrôle gestuel</div>
+        <div class="hud-row">
+            <span class="hud-label">Système</span>
+            <span class="hud-value" id="statusText">Init...</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">Image</span>
+            <span class="hud-value" id="currentImage">-</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">Geste</span>
+            <span class="hud-value" id="gestureText">-</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">Zoom</span>
+            <span class="hud-value" id="zoomLevel">1.0×</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">Actions</span>
+            <span class="hud-value ok" id="actionCount">0</span>
+        </div>
+    </div>
+
+    <button id="btnLogout">⏏ Déconnexion</button>
+
+    <!-- Loading -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>Chargement de MediaPipe Hands...</p>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ═══════════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  VARIABLES GLOBALES
+// ══════════════════════════════════════════════════════════
+window.drawConnectors = window.drawConnectors || function(){};
+window.drawLandmarks  = window.drawLandmarks  || function(){};
+window.HANDS_CONNECTIONS = window.HANDS_CONNECTIONS || [];
+
+// Session
+let session = { prenom: '', nom: '', classe: '', td: '' };
+let actionLog = [];          // Journal des interactions
+let actionCount = 0;
+
+// Navigation / images
+let config          = null;
+let currentImageId  = 1;
+let currentImageFile = '';
+let tdBasePath      = '';    // ex: "TD1/"
+let lastImageChange = 0;
+const IMAGE_CHANGE_DELAY = 1200; // ms
+
+// Zoom / translation
+let currentZoom  = 1.0;
+let isZooming    = false;
+let lastDistance = 0;
+let baseZoom     = 1.0;
+let translateX   = 0;
+let translateY   = 0;
+let lastCenterX  = 0;
+let lastCenterY  = 0;
+
+// ── Éléments DOM ───────────────────────────────────────────
+const loginScreen   = document.getElementById('loginScreen');
+const appScreen     = document.getElementById('appScreen');
+const mainImage     = document.getElementById('mainImage');
+const webcam        = document.getElementById('webcam');
+const canvasElement = document.getElementById('canvas');
+const canvasCtx     = canvasElement.getContext('2d');
+const statusText    = document.getElementById('statusText');
+const currentImageEl= document.getElementById('currentImage');
+const gestureText   = document.getElementById('gestureText');
+const zoomLevelEl   = document.getElementById('zoomLevel');
+const loadingEl     = document.getElementById('loading');
+const pointer       = document.getElementById('pointer');
+const toastEl       = document.getElementById('toast');
+const actionCountEl = document.getElementById('actionCount');
+
+// ══════════════════════════════════════════════════════════
+//  CONNEXION
+// ══════════════════════════════════════════════════════════
+document.getElementById('btnLogin').addEventListener('click', () => {
+    const prenom = document.getElementById('inputPrenom').value.trim();
+    const nom    = document.getElementById('inputNom').value.trim();
+    const classe = document.getElementById('inputClasse').value.trim();
+    const td     = document.getElementById('selectTD').value;
+    const errEl  = document.getElementById('loginError');
+
+    if (!prenom || !nom || !classe || !td) {
+        errEl.style.display = 'block';
+        return;
+    }
+    errEl.style.display = 'none';
+
+    session = { prenom, nom, classe, td };
+    tdBasePath = td + '/';
+
+    // Remplir le badge
+    document.getElementById('badgeUser').textContent   = prenom + ' ' + nom;
+    document.getElementById('badgeClasse').textContent = classe;
+    document.getElementById('badgeTD').textContent     = td;
+
+    // Enregistrer l'événement de connexion
+    logAction('connexion', { message: `Début de session – ${td}` });
+
+    // Basculer vers l'app
+    loginScreen.style.display = 'none';
+    appScreen.style.display   = 'block';
+
+    initApp();
+});
+
+// Permettre la touche Entrée
+document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && loginScreen.style.display !== 'none') {
+        document.getElementById('btnLogin').click();
+    }
+});
+
+// Déconnexion
+document.getElementById('btnLogout').addEventListener('click', () => {
+    logAction('deconnexion', { message: 'Fin de session' });
+    exportActionsJSON();
+    // Réinitialiser et revenir au login
+    appScreen.style.display = 'none';
+    loginScreen.style.display = 'flex';
+    actionLog = [];
+    actionCount = 0;
+    actionCountEl.textContent = '0';
+    // Stopper la caméra si active
+    if (webcam.srcObject) {
+        webcam.srcObject.getTracks().forEach(t => t.stop());
+        webcam.srcObject = null;
+    }
+});
+
+// ══════════════════════════════════════════════════════════
+//  JOURNAL DES ACTIONS
+// ══════════════════════════════════════════════════════════
+function logAction(type, details = {}) {
+    const entry = {
+        timestamp : new Date().toISOString(),
+        session   : { ...session },
+        type,
+        ...details
+    };
+    actionLog.push(entry);
+    actionCount++;
+    actionCountEl.textContent = actionCount;
+    console.log('[ACTION]', entry);
+}
+
+function exportActionsJSON() {
+    const data = {
+        session : { ...session, exportedAt: new Date().toISOString() },
+        actions : actionLog
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `Actions-${session.td}-${session.nom}-${session.prenom}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Journal exporté ✓', 'success');
+}
+
+// ══════════════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════════════
+let toastTimer = null;
+function showToast(msg, type = 'info') {
+    toastEl.textContent = msg;
+    toastEl.className   = `show ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toastEl.className = ''; }, 2200);
+}
+
+// ══════════════════════════════════════════════════════════
+//  CHARGEMENT CONFIG TD
+// ══════════════════════════════════════════════════════════
+async function loadConfig() {
+    try {
+        const url = `${tdBasePath}config.json`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        config = await res.json();
+        statusText.textContent = 'Config chargée';
+        statusText.className   = 'hud-value ok';
+        // Charger la 1ère image
+        loadImageById(config.images[0].id);
+    } catch (err) {
+        console.error('loadConfig:', err);
+        statusText.textContent = 'Erreur config';
+        statusText.className   = 'hud-value warn';
+        showToast(`Impossible de charger ${tdBasePath}config.json`, 'warn');
+    }
+}
+
+// ══════════════════════════════════════════════════════════
+//  CHARGEMENT IMAGE
+// ══════════════════════════════════════════════════════════
+function loadImageById(imageId) {
+    const now = Date.now();
+    if (now - lastImageChange < IMAGE_CHANGE_DELAY) return;
+
+    const imgData = config.images.find(i => i.id === imageId);
+    if (!imgData) {
+        console.error('Image introuvable, id:', imageId);
+        return;
+    }
+
+    const src = tdBasePath + imgData.file;
+    mainImage.src = src;
+    currentImageId   = imageId;
+    currentImageFile = imgData.file;
+    currentImageEl.textContent = imgData.file;
+
+    // Réinitialiser zoom/translation
+    currentZoom = 1.0;
+    translateX  = 0;
+    translateY  = 0;
+    applyTransform();
+
+    drawZones(imgData.zones);
+    lastImageChange = now;
+
+    logAction('chargement_image', {
+        imageId,
+        imageFile: imgData.file,
+        path: src
+    });
+    console.log('Image chargée:', src);
+}
+
+// ══════════════════════════════════════════════════════════
+//  ZONES (affichage debug)
+// ══════════════════════════════════════════════════════════
+function drawZones(zones) {
+    const container = document.getElementById('debugZones');
+    container.innerHTML = '';
+    zones.forEach((zone, i) => {
+        const div = document.createElement('div');
+        div.className = 'debug-zone';
+        div.style.left   = zone.pt1.x + 'px';
+        div.style.top    = zone.pt1.y + 'px';
+        div.style.width  = (zone.pt2.x - zone.pt1.x) + 'px';
+        div.style.height = (zone.pt2.y - zone.pt1.y) + 'px';
+
+        const lbl = document.createElement('span');
+        lbl.className   = 'debug-zone-label';
+        lbl.textContent = `Z${i+1} → ${zone.targetImage}`;
+        div.appendChild(lbl);
+        container.appendChild(div);
+    });
+}
+
+// ══════════════════════════════════════════════════════════
+//  ZOOM / TRANSLATION
+// ══════════════════════════════════════════════════════════
+function applyTransform() {
+    mainImage.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
+    zoomLevelEl.textContent   = currentZoom.toFixed(2) + '×';
+}
+
+// ══════════════════════════════════════════════════════════
+//  POINTEUR
+// ══════════════════════════════════════════════════════════
+function updatePointer(lm, isActive) {
+    if (!lm) { pointer.style.display = 'none'; return; }
+    pointer.style.left    = (lm.x * window.innerWidth)  + 'px';
+    pointer.style.top     = (lm.y * window.innerHeight) + 'px';
+    pointer.style.display = 'block';
+    pointer.classList.toggle('active', isActive);
+}
+
+// ══════════════════════════════════════════════════════════
+//  GESTES
+// ══════════════════════════════════════════════════════════
+function calcDist(a, b) {
+    return Math.hypot(b.x - a.x, b.y - a.y);
+}
+
+function isPinching(lm) {
+    return calcDist(lm[4], lm[8]) < 0.055;
+}
+
+function isIndexPointing(lm) {
+    // Index levé, majeur/annulaire/auriculaire pliés
+    const indexUp  = lm[8].y < lm[6].y;
+    const midDown  = lm[12].y > lm[10].y;
+    const ringDown = lm[16].y > lm[14].y;
+    const pinDown  = lm[20].y > lm[18].y;
+    const raised   = (lm[0].y - lm[8].y) > 0.1;
+    return indexUp && midDown && ringDown && pinDown && raised;
+}
+
+// ══════════════════════════════════════════════════════════
+//  TRAITEMENT MEDIAPIPE
+// ══════════════════════════════════════════════════════════
+function onResults(results) {
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+    const handsLm   = results.multiHandLandmarks  || [];
+    const handsInfo = results.multiHandedness     || [];
+
+    for (let i = 0; i < handsLm.length; i++) {
+        window.drawConnectors(canvasCtx, handsLm[i], window.HANDS_CONNECTIONS,
+                              { color: '#00e676', lineWidth: 2 });
+        window.drawLandmarks(canvasCtx, handsLm[i],
+                             { color: '#ff1744', lineWidth: 1, radius: 3 });
+    }
+
+    if (handsLm.length === 2) {
+        handleTwoHands(handsLm, handsInfo);
+    } else if (handsLm.length === 1) {
+        handleOneHand(handsLm[0], handsInfo[0]);
+    } else {
+        gestureText.textContent = 'Aucune main';
+        gestureText.className   = 'hud-value';
+        pointer.style.display   = 'none';
+        document.getElementById('debugZones').classList.remove('visible');
+        isZooming = false;
+    }
+
+    canvasCtx.restore();
+}
+
+// ── Deux mains : zoom + translation ──────────────────────
+function handleTwoHands(handsLm) {
+    const h1 = handsLm[0], h2 = handsLm[1];
+    const p1 = isPinching(h1), p2 = isPinching(h2);
+    pointer.style.display = 'none';
+    document.getElementById('debugZones').classList.remove('visible');
+
+    if (p1 && p2) {
+        const cx = (h1[4].x + h2[4].x) / 2;
+        const cy = (h1[4].y + h2[4].y) / 2;
+        const dist = calcDist(h1[4], h2[4]);
+
+        if (!isZooming) {
+            isZooming   = true;
+            lastDistance = dist;
+            baseZoom    = currentZoom;
+            lastCenterX = cx;
+            lastCenterY = cy;
+            logAction('zoom_debut', { zoomBase: currentZoom });
+            gestureText.textContent = 'Zoom actif';
+            gestureText.className   = 'hud-value active';
+        } else {
+            // Zoom
+            const ratio  = dist / lastDistance;
+            currentZoom  = Math.max(1.0, Math.min(8.0, baseZoom * ratio));
+
+            // Translation (uniquement si image zoomée)
+            if (currentZoom > 1.0) {
+                const dx = (cx - lastCenterX) * window.innerWidth  * 2.2;
+                const dy = (cy - lastCenterY) * window.innerHeight * 2.2;
+                translateX = Math.max(-700, Math.min(700, translateX + dx));
+                translateY = Math.max(-700, Math.min(700, translateY + dy));
+            } else {
+                translateX = 0; translateY = 0;
+            }
+
+            lastCenterX = cx; lastCenterY = cy;
+            applyTransform();
+            gestureText.textContent = `Zoom ${currentZoom.toFixed(2)}× | Δ(${Math.round(translateX)}, ${Math.round(translateY)})`;
+        }
+    } else {
+        if (isZooming) {
+            logAction('zoom_fin', {
+                zoomFinal: currentZoom,
+                translateX: Math.round(translateX),
+                translateY: Math.round(translateY)
+            });
+            isZooming = false;
+            if (currentZoom <= 1.02) {
+                translateX = 0; translateY = 0; applyTransform();
+            }
+            gestureText.textContent = 'Zoom relâché';
+            gestureText.className   = 'hud-value';
+        }
+    }
+}
+
+// ── Une main : sélection de zone ─────────────────────────
+function handleOneHand(lm, info) {
+    if (isZooming) { pointer.style.display = 'none'; return; }
+
+    const isRight    = info.label === 'Right';
+    const isPointing = isIndexPointing(lm);
+    const indexTip   = lm[8];
+    const debugZones = document.getElementById('debugZones');
+
+    if (isRight) {
+        updatePointer(indexTip, isPointing);
+        // Afficher les zones uniquement quand l'index droit est levé
+        debugZones.classList.toggle('visible', isPointing);
+    } else {
+        pointer.style.display = 'none';
+        debugZones.classList.remove('visible');
+    }
+
+    if (isPointing && isRight && config) {
+        const imgData = config.images.find(i => i.id === currentImageId);
+        if (!imgData) return;
+
+        const sx = indexTip.x * window.innerWidth;
+        const sy = indexTip.y * window.innerHeight;
+
+        for (const zone of imgData.zones) {
+            if (sx >= zone.pt1.x && sx <= zone.pt2.x &&
+                sy >= zone.pt1.y && sy <= zone.pt2.y) {
+
+                gestureText.textContent = `Zone → ${zone.targetImage}`;
+                gestureText.className   = 'hud-value active';
+
+                // Chercher l'image cible dans la config
+                const target = config.images.find(i => i.file === zone.targetImage);
+
+                if (target && target.id !== currentImageId) {
+                    logAction('selection_zone', {
+                        zoneIndex  : imgData.zones.indexOf(zone),
+                        fromImage  : currentImageFile,
+                        toImage    : zone.targetImage,
+                        posX       : Math.round(sx),
+                        posY       : Math.round(sy)
+                    });
+                    loadImageById(target.id);
+                    showToast(`→ ${zone.targetImage}`, 'info');
+
+                } else if (!target) {
+                    // Image hors config : chargement direct
+                    const src = tdBasePath + zone.targetImage;
+                    logAction('selection_zone_direct', {
+                        fromImage: currentImageFile,
+                        toImage  : zone.targetImage,
+                        path     : src
+                    });
+                    mainImage.src = src;
+                    currentImageFile = zone.targetImage;
+                    currentImageEl.textContent = zone.targetImage;
+                    currentZoom = 1.0; translateX = 0; translateY = 0;
+                    applyTransform();
+                    lastImageChange = Date.now();
+                    showToast(`→ ${zone.targetImage}`, 'info');
+                }
+                return;
+            }
+        }
+        gestureText.textContent = 'Index levé – hors zone';
+        gestureText.className   = 'hud-value';
+
+    } else {
+        gestureText.textContent = isRight ? 'Main droite' : 'Main gauche';
+        gestureText.className   = 'hud-value';
+    }
+}
+
+// ══════════════════════════════════════════════════════════
+//  INITIALISATION MEDIAPIPE
+// ══════════════════════════════════════════════════════════
+let handsModel = null;
+
+function initMediaPipe() {
+    handsModel = new Hands({
+        locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
+    });
+    handsModel.setOptions({
+        selfieMode            : true,
+        maxNumHands           : 2,
+        modelComplexity       : 1,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence : 0.5
+    });
+    handsModel.onResults(onResults);
+}
+
+// ══════════════════════════════════════════════════════════
+//  CAMÉRA
+// ══════════════════════════════════════════════════════════
+async function initCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
+        });
+        webcam.srcObject = stream;
+
+        await new Promise(resolve => {
+            webcam.onloadedmetadata = () => {
+                canvasElement.width  = webcam.videoWidth;
+                canvasElement.height = webcam.videoHeight;
+                resolve();
+            };
+        });
+
+        (async function loop() {
+            if (webcam.readyState === webcam.HAVE_ENOUGH_DATA) {
+                await handsModel.send({ image: webcam });
+            }
+            requestAnimationFrame(loop);
+        })();
+
+        loadingEl.style.display = 'none';
+        statusText.textContent  = 'Actif';
+        statusText.className    = 'hud-value ok';
+    } catch (err) {
+        console.error(err);
+        loadingEl.innerHTML = `<p style="color:#f85149">Caméra inaccessible : ${err.message}</p>`;
+        statusText.textContent = 'Erreur caméra';
+    }
+}
+
+// ══════════════════════════════════════════════════════════
+//  DÉMARRAGE DE L'APPLICATION (après connexion)
+// ══════════════════════════════════════════════════════════
+async function initApp() {
+    loadingEl.style.display = 'flex';
+    initMediaPipe();
+    await loadConfig();
+    await initCamera();
+}
+</script>
+</body>
+</html>
