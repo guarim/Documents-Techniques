@@ -1,0 +1,55 @@
+{
+  "session": {
+    "prenom": "Marie",
+    "nom": "Dupont",
+    "classe": "L3 Informatique",
+    "td": "TD2",
+    "exportedAt": "2026-02-11T09:45:32.000Z"
+  },
+  "actions": [
+    {
+      "timestamp": "2026-02-11T09:30:00.000Z",
+      "session": { "prenom": "Marie", "nom": "Dupont", "classe": "L3 Informatique", "td": "TD2" },
+      "type": "connexion",
+      "message": "Début de session – TD2"
+    },
+    {
+      "timestamp": "2026-02-11T09:30:05.000Z",
+      "session": { "prenom": "Marie", "nom": "Dupont", "classe": "L3 Informatique", "td": "TD2" },
+      "type": "chargement_image",
+      "imageId": 1,
+      "imageFile": "1.png",
+      "path": "TD2/1.png"
+    },
+    {
+      "timestamp": "2026-02-11T09:31:12.000Z",
+      "session": { "prenom": "Marie", "nom": "Dupont", "classe": "L3 Informatique", "td": "TD2" },
+      "type": "selection_zone",
+      "zoneIndex": 0,
+      "fromImage": "1.png",
+      "toImage": "2.png",
+      "posX": 145,
+      "posY": 95
+    },
+    {
+      "timestamp": "2026-02-11T09:32:01.000Z",
+      "session": { "prenom": "Marie", "nom": "Dupont", "classe": "L3 Informatique", "td": "TD2" },
+      "type": "zoom_debut",
+      "zoomBase": 1
+    },
+    {
+      "timestamp": "2026-02-11T09:32:18.000Z",
+      "session": { "prenom": "Marie", "nom": "Dupont", "classe": "L3 Informatique", "td": "TD2" },
+      "type": "zoom_fin",
+      "zoomFinal": 3.2,
+      "translateX": 120,
+      "translateY": -45
+    },
+    {
+      "timestamp": "2026-02-11T09:45:32.000Z",
+      "session": { "prenom": "Marie", "nom": "Dupont", "classe": "L3 Informatique", "td": "TD2" },
+      "type": "deconnexion",
+      "message": "Fin de session"
+    }
+  ]
+}
